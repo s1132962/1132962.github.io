@@ -28,7 +28,7 @@ h1 {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: 8px; /* 增加間隔，視覺上更清晰 */
+    gap: 8px; /* 修正：已檢查並確保分號正確 */
 }
 
 .cell {
