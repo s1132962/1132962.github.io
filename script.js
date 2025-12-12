@@ -103,9 +103,7 @@ function getEmptyCells() {
 function findWinningMove(player) {
     for (let [a, b, c] of WINNING_COMBOS) {
         const line = [board[a], board[b], board[c]];
-        // 檢查該組合中是否有兩個是當前 player 且有一個是 null (空位)
         if (line.filter(v => v === player).length === 2 && line.includes(null)) {
-            // 回傳空位所在的原索引 a, b, c
             if (board[a] === null) return a;
             if (board[b] === null) return b;
             if (board[c] === null) return c;
@@ -120,7 +118,6 @@ function countImmediateWins(player) {
     let count = 0;
     for (let [a, b, c] of WINNING_COMBOS) {
         const line = [board[a], board[b], board[c]];
-        // 檢查該線路是否包含兩個該 player 且有一個 null (即只差一步就能贏)
         if (line.filter(v => v === player).length === 2 && line.includes(null)) {
             count++;
         }
@@ -131,12 +128,10 @@ function countImmediateWins(player) {
 // [步驟 3] 找出電腦自己能建立 Fork (雙重威脅) 的位置
 function findForkSpot(player) {
     const empty = getEmptyCells();
-
     for (let i of empty) {
-        board[i] = player; // 暫時下棋
+        board[i] = player;
         let count = countImmediateWins(player);
-        board[i] = null; // 恢復棋盤
-
+        board[i] = null;
         if (count >= 2) return i;
     }
     return null;
@@ -145,12 +140,10 @@ function findForkSpot(player) {
 // [步驟 4] 找出對手能建立 Fork 的位置，並阻擋
 function blockPlayerFork() {
     const empty = getEmptyCells();
-
     for (let i of empty) {
-        board[i] = 'X'; // 假設玩家會下在這裡
+        board[i] = 'X';
         let count = countImmediateWins('X');
-        board[i] = null; // 恢復棋盤
-
+        board[i] = null;
         if (count >= 2) return i;
     }
     return null;
@@ -171,7 +164,6 @@ function findBestNonWinningMove() {
     const corners = [0, 2, 6, 8];
     const availableCorners = empty.filter(i => corners.includes(i));
     if (availableCorners.length > 0) {
-        // 隨機選擇一個角位
         return availableCorners[Math.floor(Math.random() * availableCorners.length)];
     }
 
@@ -179,11 +171,9 @@ function findBestNonWinningMove() {
     const edges = [1, 3, 5, 7];
     const availableEdges = empty.filter(i => edges.includes(i));
     if (availableEdges.length > 0) {
-        // 隨機選擇一個邊位
         return availableEdges[Math.floor(Math.random() * availableEdges.length)];
     }
     
-    // 備用：隨機下棋 (理論上不會執行)
     return getRandomMove();
 }
 
@@ -196,13 +186,38 @@ function getRandomMove() {
 
 
 /* ======================
-   ★★★ 基礎遊戲函數 ★★★
+   ★★★ 基礎遊戲函數 & UI/UX 增強 ★★★
    ====================== */
 
+// [UI/UX 增強] 找出獲勝的組合
+function getWinningCombo(player) {
+    for (let [a, b, c] of WINNING_COMBOS) {
+        if (board[a] === player && board[b] === player && board[c] === player) {
+            return [a, b, c]; // 回傳獲勝的三個索引
+        }
+    }
+    return null;
+}
+
+// [UI/UX 增強] 高亮顯示獲勝線條
+function highlightWin(combo) {
+    const cells = document.getElementsByClassName('cell');
+    combo.forEach(index => {
+        cells[index].classList.add('win');
+    });
+}
+
+// [修改] 更新棋盤函數：新增 X/O 類別用於顏色顯示
 function updateBoard() {
     const cells = document.getElementsByClassName('cell');
     for (let i = 0; i < 9; i++) {
-        cells[i].innerText = board[i] || '';
+        cells[i].innerText = board[i] || '';
+        cells[i].classList.remove('x', 'o', 'win'); // 清除舊類別
+        if (board[i] === 'X') {
+            cells[i].classList.add('x');
+        } else if (board[i] === 'O') {
+            cells[i].classList.add('o');
+        }
     }
 }
 
@@ -216,9 +231,19 @@ function isFull() {
     return board.every(cell => cell !== null);
 }
 
+// [修改] 結束遊戲函數：呼叫高亮顯示
 function endGame(message) {
-    document.getElementById('status').innerText = message;
-    active = false;
+    document.getElementById('status').innerText = message;
+    active = false;
+    
+    // 檢查是否有贏家，如果有則高亮顯示線條
+    const winner = message.includes('勝利') ? (message.includes('(X)') ? 'X' : 'O') : null;
+    if (winner) {
+        const combo = getWinningCombo(winner);
+        if (combo) {
+            highlightWin(combo);
+        }
+    }
 }
 
 function resetGame() {

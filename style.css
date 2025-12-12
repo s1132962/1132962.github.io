@@ -1,11 +1,26 @@
 body {
-font-family: "Microsoft JhengHei", sans-serif;
-text-align: center;
-background-color: #f2f2f2;
+    font-family: "Microsoft JhengHei", sans-serif;
+    text-align: center;
+    background-color: #f7f7f7; /* 輕微提亮背景 */
+    color: #333;
+    padding-top: 20px;
 }
+
 h1 {
-color: #333;
+    color: #1e88e5; /* 標題使用品牌藍色 */
 }
+
+#status {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-bottom: 25px;
+    padding: 10px;
+    background-color: #e3f2fd; /* 狀態欄背景色 */
+    border-radius: 5px;
+    width: fit-content;
+    margin: 0 auto 25px auto;
+}
+
 .board {
     width: 300px;
     height: 300px;
@@ -13,22 +28,63 @@ color: #333;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: 5px;
-    }
-    .cell {
-        background-color: white;
-        border: 2px solid #888;
-        font-size: 2em;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background-color 0.3s;
-        }
-        .cell:hover {
-            background-color: #e0e0e0;
-            }
-            .controls {
-            margin-top: 10px;
-            }
-            
+    gap: 8px; /* 增加間隔，視覺上更清晰 */
+}
+
+.cell {
+    background-color: white;
+    border: none; /* 移除邊框，改用陰影模擬深度 */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    font-size: 3em; /* 放大字體 */
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.cell:hover {
+    background-color: #eef;
+    transform: scale(1.02); /* 懸停時略微放大 */
+}
+
+/* 視覺回饋：X 和 O 的專屬顏色 */
+.cell.x {
+    color: #1e88e5; /* 藍色 */
+}
+.cell.o {
+    color: #d81b60; /* 粉紅色/紅色 */
+}
+
+/* 視覺回饋：勝利線條高亮 */
+.cell.win {
+    background-color: #43a047; /* 勝利綠色 */
+    color: white !important; /* 強制勝利文字為白色 */
+    box-shadow: 0 0 15px #43a047; /* 增加光暈效果 */
+}
+
+
+.controls {
+    margin-top: 25px;
+}
+
+/* 按鈕美化 */
+button {
+    padding: 10px 25px;
+    font-size: 1.1em;
+    background-color: #4caf50; /* 綠色，行動呼籲色 */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px #388e3c;
+    transition: background-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+button:active {
+    background-color: #388e3c;
+    box-shadow: 0 2px #388e3c;
+    transform: translateY(2px);
+}
