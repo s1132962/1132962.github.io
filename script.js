@@ -47,24 +47,24 @@ function playerMove(i) {
    ★★★ 升級後 AI 區塊 ★★★
    ====================== */
 
-function computerMove() {
+   function computerMove() {
 
-    // 1. 嘗試自己獲勝
+    // 1. 能贏 → 先贏
     let move = findWinningMove('O');
 
-    // 2. 阻止玩家獲勝
+    // 2. 玩家下一步會贏 → 一定要擋
     if (move === null) move = findWinningMove('X');
 
-    // 3. 製造自己的 Fork（雙威脅）
-    if (move === null) move = findForkMove('O');
+    // 3. 製造自己的 Fork
+    if (move === null) move = findForkSpot('O');
 
-    // 4. 阻止玩家 Fork
-    if (move === null) move = blockOpponentFork();
+    // 4. 阻止玩家 fork（新的正確版本）
+    if (move === null) move = blockPlayerFork();
 
-    // 5. 中心優先
+    // 5. 中心
     if (move === null && board[4] === null) move = 4;
 
-    // 6. 角落優先
+    // 6. 角落
     if (move === null) move = chooseCorner();
 
     // 7. 邊格
@@ -73,22 +73,21 @@ function computerMove() {
     // 8. 隨機
     if (move === null) move = getRandomMove();
 
-    // === 執行下棋 ===
-    if (move !== null) {
-        board[move] = 'O';
-        updateBoard();
+    // 放棋
+    board[move] = 'O';
+    updateBoard();
 
-        if (checkWin('O')) {
-            endGame('電腦 (O) 勝利！');
-            return;
-        } else if (isFull()) {
-            endGame('平手！');
-            return;
-        }
-
-        current = 'X';
-        document.getElementById('status').innerText = '輪到玩家 (X)';
+    if (checkWin('O')) {
+        endGame('電腦 (O) 勝利！');
+        return;
     }
+    if (isFull()) {
+        endGame('平手！');
+        return;
+    }
+
+    current = 'X';
+    document.getElementById('status').innerText = '輪到玩家 (X)';
 }
 
 /* --- 基本贏法判斷 --- */
@@ -110,50 +109,51 @@ function getEmptyCells() {
 }
 
 /* --- 找出自己能造成 fork 的位置 --- */
-function findForkMove(player) {
+// 判斷 player 放在某格後是否會產生 2 個可勝出機會
+function countWinningChances(player) {
+    let count = 0;
+
+    for (let [a, b, c] of WINNING_COMBOS) {
+        const line = [board[a], board[b], board[c]];
+
+        if (line.filter(v => v === player).length === 1 &&
+            line.filter(v => v === null).length === 2) {
+            count++;
+        }
+    }
+    return count;
+}
+
+function findForkSpot(player) {
     const empty = getEmptyCells();
 
     for (let i of empty) {
         board[i] = player;
-        let chances = 0;
-
-        for (let [a, b, c] of WINNING_COMBOS) {
-            const line = [board[a], board[b], board[c]];
-            if (line.filter(v => v === player).length === 2 && line.includes(null)) {
-                chances++;
-            }
-        }
-
+        let count = countWinningChances(player);
         board[i] = null;
 
-        if (chances >= 2) return i;
+        if (count >= 2)
+            return i;
     }
-
     return null;
 }
 
+
 /* --- 阻止對手 fork --- */
-function blockOpponentFork() {
-    const opponent = 'X';
+function blockPlayerFork() {
     const empty = getEmptyCells();
 
     for (let i of empty) {
-        board[i] = opponent;
-        let chances = 0;
-
-        for (let [a, b, c] of WINNING_COMBOS) {
-            const line = [board[a], board[b], board[c]];
-            if (line.filter(v => v === opponent).length === 2 && line.includes(null)) {
-                chances++;
-            }
-        }
-
+        board[i] = 'X';
+        let count = countWinningChances('X');
         board[i] = null;
 
-        if (chances >= 2) return i;
+        if (count >= 2)
+            return i;
     }
     return null;
 }
+
 
 /* --- 角落優先 --- */
 function chooseCorner() {
