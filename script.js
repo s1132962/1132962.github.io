@@ -10,7 +10,7 @@ const WINNING_COMBOS = [
 ];
 
 /* ======================
-   ★★★ 初始化與玩家移動 ★★★
+   ★★★ 遊戲初始化與玩家移動 ★★★
    ====================== */
 
 function init() {
@@ -21,10 +21,10 @@ function init() {
     current = 'X';
     document.getElementById('status').innerText = '玩家 (X) 先手';
 
+    // 建立 9 個格子
     for (let i = 0; i < 9; i++) {
         const cell = document.createElement('div');
         cell.classList.add('cell');
-        // 為了統一風格，將 'X' 設為深色，'O' 設為淺色
         cell.onclick = () => playerMove(i);
         boardEl.appendChild(cell);
     }
@@ -46,12 +46,11 @@ function playerMove(i) {
     current = 'O';
     document.getElementById('status').innerText = '電腦思考中...';
 
-    // 減少電腦思考時間至 500ms
     setTimeout(computerMove, 500);
 }
 
 /* ======================
-   ★★★ 升級後 AI 決策流程 ( Minimax Level ) ★★★
+   ★★★ 完美 AI 決策流程 ( Minimax Level ) ★★★
    ====================== */
 
 function computerMove() {
@@ -69,15 +68,8 @@ function computerMove() {
     // 4. 阻擋 Fork：嘗試阻止對手創造 Fork
     if (move === null) move = blockPlayerFork();
     
-    // 5. 佔領中央
-    const center = 4;
-    if (move === null && board[center] === null) move = center;
-
-    // 6. 佔領角位
-    if (move === null) move = chooseCorner();
-    
-    // 7. 佔領邊位 (最後選項)
-    if (move === null) move = chooseSide();
+    // 5. 最佳非獲勝或阻擋移動 (中央 > 角位 > 邊位)
+    if (move === null) move = findBestNonWinningMove(); 
 
     // 執行移動
     if (move !== null) {
@@ -102,7 +94,12 @@ function computerMove() {
    ★★★ AI 輔助函數 ★★★
    ====================== */
 
-// 找出單一步驟可以獲勝或需要阻擋的位置 (您先前遺漏了這個定義)
+// [輔助函數] 找出所有 null 的索引 (空位)
+function getEmptyCells() {
+    return board.map((v, i) => (v === null ? i : null)).filter(v => v !== null);
+}
+
+// [步驟 1, 2] 找出單一步驟可以獲勝或需要阻擋的位置
 function findWinningMove(player) {
     for (let [a, b, c] of WINNING_COMBOS) {
         const line = [board[a], board[b], board[c]];
@@ -114,101 +111,98 @@ function findWinningMove(player) {
             if (board[c] === null) return c;
         }
     }
-    return null; // 檢查所有組合後若無機會，則回傳 null
+    return null; 
 }
 
 
-// 找出所有 null 的索引 (空位)
-function getEmptyCells() {
-    return board.map((v, i) => (v === null ? i : null)).filter(v => v !== null);
-}
-
-// 判斷 player 放在某格後是否會產生 2 個可勝出機會 (Fork)
-function countWinningChances(player) {
-    let count = 0;
-
-    for (let [a, b, c] of WINNING_COMBOS) {
-        const line = [board[a], board[b], board[c]];
-
-        // 檢查該線路是否只有一個 player，且有兩個空位 (代表未來有潛在贏的機會)
-        if (line.filter(v => v === player).length === 1 &&
-            line.filter(v => v === null).length === 2) {
-            count++;
-        }
-    }
-    return count;
-}
-
-// 找出電腦自己能建立 Fork 的位置
-function findForkSpot(player) {
-    const empty = getEmptyCells();
-
-    for (let i of empty) {
-        // 暫時將棋子放在該位置
-        board[i] = player;
-        let count = findPotentialWins(player); // 檢查當前棋盤上，該 player 總共有多少潛在的贏線
-        board[i] = null; // 恢復棋盤狀態
-
-        if (count >= 2)
-            return i;
-    }
-    return null;
-}
-
-// 找出對手能建立 Fork 的位置，並阻擋
-function blockPlayerFork() {
-    const empty = getEmptyCells();
-
-    for (let i of empty) {
-        // 假設玩家會下在這裡
-        board[i] = 'X';
-        let count = findPotentialWins('X');
-        board[i] = null;
-
-        if (count >= 2)
-            return i;
-    }
-    return null;
-}
-
-// 輔助函數：計算某一玩家在當前棋盤上擁有多少條「只差一步」的勝利線
-function findPotentialWins(player) {
+// [Fork 核心] 計算某一玩家在當前棋盤上「只差一步」的勝利線數量
+function countImmediateWins(player) {
     let count = 0;
     for (let [a, b, c] of WINNING_COMBOS) {
         const line = [board[a], board[b], board[c]];
-        // 該線路必須包含該 player，並且剩下的格子都是空的
-        if (line.filter(v => v === player).length === 1 && line.filter(v => v === null).length === 2) {
+        // 檢查該線路是否包含兩個該 player 且有一個 null (即只差一步就能贏)
+        if (line.filter(v => v === player).length === 2 && line.includes(null)) {
             count++;
         }
     }
     return count;
 }
 
-// 選擇角位
-function chooseCorner() {
-    const corners = [0, 2, 6, 8];
-    const available = corners.filter(i => board[i] === null);
-    if (available.length === 0) return null;
-    return available[Math.floor(Math.random() * available.length)];
+// [步驟 3] 找出電腦自己能建立 Fork (雙重威脅) 的位置
+function findForkSpot(player) {
+    const empty = getEmptyCells();
+
+    for (let i of empty) {
+        board[i] = player; // 暫時下棋
+        let count = countImmediateWins(player);
+        board[i] = null; // 恢復棋盤
+
+        if (count >= 2) return i;
+    }
+    return null;
 }
 
-// 選擇邊位
-function chooseSide() {
-    const sides = [1, 3, 5, 7];
-    const available = sides.filter(i => board[i] === null);
-    if (available.length === 0) return null;
-    return available[Math.floor(Math.random() * available.length)];
+// [步驟 4] 找出對手能建立 Fork 的位置，並阻擋
+function blockPlayerFork() {
+    const empty = getEmptyCells();
+
+    for (let i of empty) {
+        board[i] = 'X'; // 假設玩家會下在這裡
+        let count = countImmediateWins('X');
+        board[i] = null; // 恢復棋盤
+
+        if (count >= 2) return i;
+    }
+    return null;
+}
+
+// [步驟 5] 找出最佳非獲勝/阻擋/Fork 的移動 (中央 > 角位 > 邊位)
+function findBestNonWinningMove() {
+    const empty = getEmptyCells();
+    if (empty.length === 0) return null;
+
+    // 1. 中央 (索引 4)
+    const center = 4;
+    if (empty.includes(center)) {
+        return center;
+    }
+
+    // 2. 角位 (索引 0, 2, 6, 8)
+    const corners = [0, 2, 6, 8];
+    const availableCorners = empty.filter(i => corners.includes(i));
+    if (availableCorners.length > 0) {
+        // 隨機選擇一個角位
+        return availableCorners[Math.floor(Math.random() * availableCorners.length)];
+    }
+
+    // 3. 邊位 (索引 1, 3, 5, 7)
+    const edges = [1, 3, 5, 7];
+    const availableEdges = empty.filter(i => edges.includes(i));
+    if (availableEdges.length > 0) {
+        // 隨機選擇一個邊位
+        return availableEdges[Math.floor(Math.random() * availableEdges.length)];
+    }
+    
+    // 備用：隨機下棋 (理論上不會執行)
+    return getRandomMove();
+}
+
+// 備用隨機移動 (用於 findBestNonWinningMove)
+function getRandomMove() {
+    const empty = getEmptyCells();
+    if (empty.length === 0) return null;
+    return empty[Math.floor(Math.random() * empty.length)];
 }
 
 
 /* ======================
-   ★★★ 基礎遊戲函數 (維持不變) ★★★
+   ★★★ 基礎遊戲函數 ★★★
    ====================== */
 
 function updateBoard() {
     const cells = document.getElementsByClassName('cell');
-    for (let i = 0; i < 9; i++) {   
-     cells[i].innerText = board[i] || '';
+    for (let i = 0; i < 9; i++) {
+        cells[i].innerText = board[i] || '';
     }
 }
 
@@ -231,5 +225,5 @@ function resetGame() {
     init();
 }
 
-// 初始化遊戲
+// 確保網頁載入時呼叫初始化函數
 init();
